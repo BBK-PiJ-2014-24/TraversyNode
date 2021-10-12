@@ -1,10 +1,13 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const logger = require('./middleware/logger');
+const errorHandler = require('./middleware/error');
 const morgan = require('morgan'); // a server log package
 const colors = require('colors'); // Add colors to console log msg
 const connectDB = require('./config/db');
 
+// Route Files
+const bootcamps = require('./routes/bootcamps');
 
 // Load the env variables
 dotenv.config({ path: './config/config.env'});
@@ -12,10 +15,6 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to the Mongo DB
 connectDB();
-
-
-// Route Files
-const bootcamps = require('./routes/bootcamps');
 
 
 const app = express();
@@ -30,7 +29,7 @@ if(process.env.NODE_ENV === 'development'){
 
 // Mount Routers
 app.use('/api/v1/bootcamps', bootcamps);
-
+app.use(errorHandler);
 
 
  // Run the Server
