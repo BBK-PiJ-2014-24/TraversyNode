@@ -98,6 +98,10 @@ const BootcampSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
      }
+},
+{
+   toJSON: {virtuals:true},
+   toObject: {virtuals: true}
 });  
 
 // Create a bootcamp slug (i.e. hyphenate the name when it shows up in the URL)
@@ -126,6 +130,21 @@ BootcampSchema.pre('save', async function(next){
    // Block Address from being saved in DB
    this.address = undefined;
    next();
+});
+
+// A Cascade Delete such that when a  bootcamp is deleted its courses are deleted in the Course Collection table
+BootcampSchema.pre('remove', async function(next){
+   console.log(`Courses Are Now Removed from bootcamp ${this.id}`);
+   await this.model('Course').deleteMany({bootcamp: this._id});
+   next();
+});
+
+// Use Mongoose Reverse with Virtuals
+BootcampSchema.virtual('courses', {
+   ref: 'Course',
+   localField: '_id',
+   foreignField: 'bootcamp',
+   justOne: false,
 });
 
 module.exports = mongoose.model('Bootcamp', BootcampSchema);

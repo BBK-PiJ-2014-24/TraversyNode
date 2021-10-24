@@ -20,7 +20,7 @@ const getBootcamps = asyncHandler (async (req, res, next) => {
     let queryStr = JSON.stringify(reqQuery); //create String from query
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`); // Add '$' for mongoose fn $lte
 
-    query = Bootcamp.find(JSON.parse(queryStr));  // DB Query 
+    query = Bootcamp.find(JSON.parse(queryStr)).populate('courses');  // DB Query 
 
     // Add SELECT FROM fields to query
     if(req.query.select){
@@ -117,11 +117,13 @@ const updateBootcamp = async (req, res, next) => {
 const deleteBootcamp = async (req, res, next) => {
 
     try {
-        const bootcamp = await Bootcamp.findByIdAndDelete(req.params.id);
+        const bootcamp = await Bootcamp.findById(req.params.id);
 
         if(!bootcamp){
             return next(new ErrorResponse(`Bootcamp id:${req.params.id} not found`, 404));
         }
+        
+        bootcamp.remove();
 
         res.status(200).json({success: true, msg: `Delete Bootcamp with Id ${req.params.id}`, data: {}});
     } catch (err) {

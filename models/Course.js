@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const colors = require('colors');
 
 const CourseSchema = new mongoose.Schema( {
     title: {
@@ -43,5 +44,40 @@ const CourseSchema = new mongoose.Schema( {
     }
 });
 
+// Static function that calculates the avg cost of tuition at each bootcamp
+CourseSchema.statics.getAvgCost = async function(bootcampId){
+    // console.log('Calcuating Avg Cost....'.blue);
+
+    const objArray = await this.aggregate([
+        {
+            $match: {bootcamp: bootcampId}
+        },
+        {
+            $group: {
+                _id: '$bootcamp',
+                averageCost: { $avg: '$tuition'}
+            }
+        }
+    ]);
+    console.log(objArray);
+
+    // Update Avg Cost Attribure of the Bootcamp in the Bootcamps Collections Table
+    try {
+        await this.model('Bootcamp').findByIdAndUpdate(bootcampId,{
+            averageCost: Math.ceil(objArray[0].averageCost/10)*10,
+        });
+    } catch(err) {
+       console.error(err); 
+    }
+}
+
+// Call getAvgCost() after every save
+CourseSchema.post('save', function(){
+    this.constructor.getAvgCost(this.bootcamp);
+});
+// Call getAvgCost() Before every Remove
+CourseSchema.post('remove', function(){
+  this.constructor.getAvgCost(this.bootcamp);  
+});
 
 module.exports = mongoose.model('Course', CourseSchema);
