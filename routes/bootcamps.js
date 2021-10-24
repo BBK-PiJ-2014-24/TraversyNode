@@ -1,5 +1,8 @@
 const express = require('express');
 const bootcampController =require('../controllers/bootcampController');
+const BootcampModel = require('../models/Bootcamp');
+const queryHandler = require('../middleware/queryHandler');
+
 
 /// Include Other Resource Routers for Joins
 const courseRouter = require('./courses');
@@ -19,7 +22,7 @@ router.route('/:id/photo')
       .put(bootcampController.uploadBootcampPhoto);      
 
 router.route('/')
-      .get(bootcampController.getBootcamps)
+      .get(queryHandler(BootcampModel, 'courses'), bootcampController.getBootcamps)
       .post(bootcampController.createBootcamp);
       
 router.route('/:id')

@@ -3,6 +3,11 @@ const Bootcamp = require('../models/Bootcamp');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 
+const queryHandler = require('../middleware/queryHandler');
+const CourseModel = require('../models/Course');
+
+
+
 
 // @desc: Get All Courses with Query and Pagination functionality
 // @route: GET /api/v1/courses
@@ -10,21 +15,14 @@ const asyncHandler = require('../middleware/asyncHandler');
 // @access: public 
 // Using asyncHandler
 const getCourses = asyncHandler (async (req, res, next) => {
-    let query;
     // Determine which Route is selected
     if (req.params.bootcampId){
-        query = Course.find({bootcamp: req.params.bootcampId});
+        const courses = await Course.find({bootcamp: req.params.bootcampId});
+        return res.status(200).json({success: true, count: courses.length, data: courses });
     } else {
-        query = Course.find();
+        res.status(200).json(res.queryResults);
     }
 
-    const courses = await query; // Execute Query
-
-    res.status(200).json({
-        success: true,
-        count: courses.length,
-        data: courses
-    });
 });
 
 // @desc: Get All Course by Id
