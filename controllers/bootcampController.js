@@ -1,3 +1,5 @@
+const dotenv = require('dotenv');
+const path = require('path');
 const Bootcamp = require('../models/Bootcamp');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -156,6 +158,47 @@ const getBootcampsInRadius = asyncHandler (async (req, res, next) => {
         res.status(200).json({success: true, count: bootcamps.length, msg: `Show all Bootcamps within ${distance} mile radius`, data: bootcamps});
 });
 
+// @desc: upload photo for bootcamp
+// @route: PUT /api/v1/bootcamps/:id/photo
+// @access: private 
+const uploadBootcampPhoto = asyncHandler (async (req, res, next) => {
+
+    const bootcamp = await Bootcamp.findById(req.params.id);
+
+    if(!bootcamp){
+        return next(new ErrorResponse(`Bootcamp id:${req.params.id} not found`, 404));
+    }
+    
+    // file validation checks
+    if(!req.files){
+        return next(new ErrorResponse('No File Attached', 400));
+    }
+    const file = req.files.file;
+    if(!file.mimetype.startsWith('image')){
+        return next(new ErrorResponse('Invalid File Type. Must be an Image', 400));
+    }
+    if(file.size > process.env.MAX_FILE_UPLOAD){
+        return next(new ErrorResponse(`Image Size Too Large. Max Image Size is ${process.env.MAX_FILE_UPLOAD} bits`, 400));
+    }
+
+    // Rename file for storage and move to public folder 
+    file.name = `photo_${bootcamp._id}${path.parse(file.name).ext}`;
+    console.log('file name', file.name);
+    file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) =>{
+        if(err){
+            console.error(err);
+            return next(new ErrorResponse(`Internal Storage Error`, 500));
+        }
+        // Add File Image path to Bootcamp DB
+        await Bootcamp.findByIdAndUpdate(req.params.id, {photo: file.name});
+
+        res.status(200).json({
+            success: true,
+            data: file.name
+        });
+    });    
+});
+
 // Exports
 // -------
 exports.getBootcamps = getBootcamps;
@@ -164,3 +207,4 @@ exports.createBootcamp = createBootcamp;
 exports.updateBootcamp = updateBootcamp;
 exports.deleteBootcamp = deleteBootcamp;
 exports.getBootcampsInRadius = getBootcampsInRadius;
+exports.uploadBootcampPhoto = uploadBootcampPhoto;

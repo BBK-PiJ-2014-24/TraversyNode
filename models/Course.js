@@ -59,7 +59,7 @@ CourseSchema.statics.getAvgCost = async function(bootcampId){
             }
         }
     ]);
-    console.log(objArray);
+    // console.log(objArray);
 
     // Update Avg Cost Attribure of the Bootcamp in the Bootcamps Collections Table
     try {
