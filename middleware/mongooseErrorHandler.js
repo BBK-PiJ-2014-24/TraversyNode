@@ -1,7 +1,7 @@
 const ErrorResponse = require('../utils/errorResponse');
 
-
- const errorHandler = (err, req, res, next) => {
+// A Handler for Mongoose Errors after the query sent to the DB
+ const mongooseErrorHandler = (err, req, res, next) => {
     console.log(err.stack.red);
 
     console.log(err);
@@ -32,4 +32,4 @@ const ErrorResponse = require('../utils/errorResponse');
     });
 }
 
-module.exports = errorHandler;
+module.exports = mongooseErrorHandler;

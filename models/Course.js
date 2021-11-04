@@ -48,6 +48,9 @@ const CourseSchema = new mongoose.Schema( {
 CourseSchema.statics.getAvgCost = async function(bootcampId){
     // console.log('Calcuating Avg Cost....'.blue);
 
+    // The aggregate function builds up the query in a pipeline
+    // $match: is a WHERE query condition - this case WHERE bootcamp == function argument
+    // $group: is a GROUP By query condition + the AGGREGATION calculation - this case avg
     const objArray = await this.aggregate([
         {
             $match: {bootcamp: bootcampId}

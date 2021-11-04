@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
-const logger = require('./middleware/logger');
-const errorHandler = require('./middleware/error');
+const logger = require('./middleware/loggerHandler');
+const mongooseErrorHandler = require('./middleware/mongooseErrorHandler');
 const morgan = require('morgan'); // a server log package
 const colors = require('colors'); // Add colors to console log msg
 const fileupload = require('express-fileupload');
@@ -26,7 +26,7 @@ app.use(express.json());
 // Dev logging middleware
 if(process.env.NODE_ENV === 'development'){
     app.use(logger); // custom made logger
-    app.use(morgan('dev'));
+    app.use(morgan('dev')); // a logger package on npm
 }
 
 
@@ -39,7 +39,7 @@ app.use(express.static(path.join(__dirname, 'public', )));
 // Mount Routers
 app.use('/api/v1/bootcamps', bootcamps);
 app.use('/api/v1/courses', courses);
-app.use(errorHandler);
+app.use(mongooseErrorHandler);
 
 
  // Run the Server

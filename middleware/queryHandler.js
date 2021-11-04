@@ -1,18 +1,22 @@
 const queryHandler = (model, populateFields) => async (req,res,next) => {
 
-    let query;
-    const reqQuery = {...req.query};  // copy req.query
+    // STEP 0: Initialization and Declaration 
+    let query; // the query will be built up over various stages
+    const reqQuery = {...req.query};  // Note that req.query contains all the params AFTER the "?" in the route.
+                                      // A spread operator is used so that it makes a hard copy of the req.query
 
-    // Temporarily Remove 'SELECT', 'SORT', 'LIMIT', 'PAGE' from query and focus on WHERE conditions
-    const removeFields = ['select, sort', 'page', 'limit'];
-    removeFields.forEach(param => delete reqQuery[param]);
+    // STEP 1: Focus on the Query itself, ignore the SQL that just shapes the results 
+    // So, temporarily Remove 'SELECT', 'SORT', 'LIMIT', 'PAGE' from query and focus on WHERE conditions
+    const removeFields = ['select', 'sort', 'page', 'limit'];
+    removeFields.forEach(param => delete reqQuery[param]); // delete in copy of req.params
 
-    let queryStr = JSON.stringify(reqQuery); //create String from query
+    // STEP 2: Run the Query with 'WHERE' conditions 
+    let queryStr = JSON.stringify(reqQuery); //create String from query in order that it can b adjusted in next line
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`); // Add '$' for mongoose fn $lte
+    query = model.find(JSON.parse(queryStr));  // DB Query, convert querStr back into JSON.  
 
-    query = model.find(JSON.parse(queryStr));  // DB Query 
-
-    // Add SELECT FROM fields to query
+    // STEP 3: Refine the Query Results with SELECT, JOIN(Populate), SORT, LIMIT and PAGINATION
+    // Add SELECT fields to query
     if(req.query.select){
         const fields = req.query.select.split(',').join(' '); // convert multiple fields in query object into a string
         query = query.select(fields);
@@ -20,7 +24,7 @@ const queryHandler = (model, populateFields) => async (req,res,next) => {
 
     // Add SORT (use by date as default and DESC)
     if(req.query.sort){
-        const sortBy = req.query.sort.split(',').join(' ');
+        const sortBy = req.query.sort.split(',').join(' '); // .join creates a string
         query = query.sort(sortBy);
     } else {
         query = query.sort('-createdAt');
@@ -35,13 +39,14 @@ const queryHandler = (model, populateFields) => async (req,res,next) => {
     // LIMIT
     query = query.skip(startIndex).limit(limit);
 
-    // Populate Table
+    // JOIN - Populate Table
     if(populateFields){
         query = query.populate(populateFields);
     }
-    // Execute Query
+    // STEP 4: Run the completed Query
     const queryResults = await query;
 
+    // OPTIONAL STEP 5: 
     // Pagination Meta Data - API tells the client what is the next and prev page
     const pagination = {};
 
@@ -59,6 +64,7 @@ const queryHandler = (model, populateFields) => async (req,res,next) => {
         }
     }
 
+    // STEP 6: The res obj to be sent to the client
     res.queryResults = {
         success: true,
         count: queryResults.length,
