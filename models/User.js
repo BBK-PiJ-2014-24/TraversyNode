@@ -1,5 +1,6 @@
 const dotenv = require('dotenv');
 const mongoose =  require('mongoose');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -51,13 +52,21 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Add pre-save mongoose middleware for encryption 
+// -----------------------------------------------
 UserSchema.pre('save', async function(next){
+
+  // Move on if password is not changed. (i.e. during a password reset) 
+  if(!this.isModified('password')){
+    next();
+  }
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 }); 
 
 // Create a Json Web Token that will include the user id
 // This is a method as the method runs on an actual user
+// -----------------------------------------------------
 UserSchema.methods.getSignedJwtToken = function() {
   const payload = {
     id: this._id,
@@ -71,9 +80,28 @@ UserSchema.methods.getSignedJwtToken = function() {
 }
 
 // Check user entered password matches the hashed password in the db
+// -----------------------------------------------------------------
 UserSchema.methods.checkPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password); // Will return true or false
 }
+
+// Generate and hash new token if password forgotten
+//---------------------------------------------------
+ UserSchema.methods.getResetPasswordToken = function(){
+
+  // Generate Token
+  const resetToken = crypto.randomBytes(20).toString('hex');
+
+  // Update resetPasswordToken field on DB in hashed form
+  this.resetPasswordToken =  crypto.createHash('sha256').update(resetToken).digest('hex');
+
+  // Set Expire field on DB
+  this.resetPasswordExpire = Date.now() + (10*60*1000);
+
+ // Return reset 
+ return resetToken;
+
+ } 
 
 
 //                             (CollectionName, Schema)

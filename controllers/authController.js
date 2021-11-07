@@ -2,6 +2,7 @@ const dotenv = require('dotenv');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
 
 // @desc: Register User and send token to user to keep him online
 // @route: POST /api/v1/auth/register
@@ -81,6 +82,67 @@ const sendCookieTokenResponse = (user, statusCode, res) => {
 
 }
 
+// @desc: GET current logged-in Usert
+// @route: GET /api/v1/auth/me
+// @access: private 
+// Using asyncHandler
+const getMyLogin = asyncHandler( async (req, res, next) => {
+    const user = await User.findById(req.user.id);
+
+    res.status(200).json({
+        success: true,
+        message: 'Return Login Data to Client',
+        body: user
+    });
+
+})
+
+// @desc: Forgot Password 
+// @route: GET /api/v1/auth/forgotpassword
+// @access: public 
+// Using asyncHandler
+const forgotPassword = asyncHandler( async (req, res, next) => {
+    const user = await User.findOne({email: req.body.email});
+
+    if(!user){
+        return next(new ErrorResponse(`No Login for email ${req.body.email}`, 404))
+    }
+
+    // Get Reset Token
+    const resetToken = user.getResetPasswordToken();
+
+    // Save the ResetToken Field Change
+    await user.save({validateBeforeSave: false});
+
+    // Set up Email
+    const confirmEmailURL = `${req.protocol}://${req.get('host')}/api/v1/resetpassword/${resetToken}`;
+    const message = `You are receiving this email because you need to confirm your email address. Please make a GET request to: \n\n ${confirmEmailURL}`;
+
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: 'Password Reset Token',
+            message
+        })
+        
+        res.status(200).json({
+            success: true,
+            message: 'Return an email for a New Token to authorize a password reset',
+            body: user
+        });
+    }catch(err){
+        console.log(err);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        // save to db
+        await user.save({validateBeforeSave: false});
+        return next(new ErrorResponse('Email Could Not Be Sent', 500));
+    }
+
+})
+
 
 exports.registerUser = registerUser; 
 exports.loginUser = loginUser;
+exports.getMyLogin = getMyLogin;
+exports.forgotPassword = forgotPassword;
