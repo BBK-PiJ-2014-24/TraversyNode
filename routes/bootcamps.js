@@ -1,5 +1,6 @@
 const express = require('express');
 const bootcampController =require('../controllers/bootcampController');
+const authHandler = require('../middleware/authHandler');
 const BootcampModel = require('../models/Bootcamp');
 const queryHandler = require('../middleware/queryHandler');
 
@@ -19,15 +20,15 @@ router.route('/radius/:zipcode/:distance')
       .get(bootcampController.getBootcampsInRadius);
 
 router.route('/:id/photo')
-      .put(bootcampController.uploadBootcampPhoto);      
+      .put(authHandler.protectRoute, authHandler.authorizeRoute('publisher', 'admin'), bootcampController.uploadBootcampPhoto);      
 
 router.route('/')
       .get(queryHandler(BootcampModel, 'courses'), bootcampController.getBootcamps)
-      .post(bootcampController.createBootcamp);
+      .post(authHandler.protectRoute, authHandler.authorizeRoute('publisher', 'admin'), bootcampController.createBootcamp);
       
 router.route('/:id')
       .get(bootcampController.getBootcampById)
-      .put(bootcampController.updateBootcamp)
-      .delete(bootcampController.deleteBootcamp);      
+      .put(authHandler.protectRoute, authHandler.authorizeRoute('publisher', 'admin'), bootcampController.updateBootcamp)
+      .delete(authHandler.protectRoute, authHandler.authorizeRoute('publisher', 'admin'), bootcampController.deleteBootcamp);      
 
 module.exports = router;

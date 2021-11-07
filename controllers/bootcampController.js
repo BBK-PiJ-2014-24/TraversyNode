@@ -30,11 +30,21 @@ const getBootcampById = async (req, res, next) => {
     }
 }
 
-// @desc: CREATE new Bootcamp
+// @desc: CREATE new Bootcamp only if admin or a publisher(max 1 bootcamp)
 // @route: POST /api/v1/bootcamps
 // @access: public 
 const createBootcamp = async (req, res, next) => {
     try {
+        // Add user to the req.body
+        req.body.user = req.user.id // req.user comes from the authHandler middleware
+
+        // Check if the user has already published another Bootcamp already 
+        // This is a logic violation unless is an 'Admin'
+        const publishedBootcamp =  await Bootcamp.findOne({user: req.user.id});
+        if(publishedBootcamp && req.user.role !== 'admin') {
+            return next(new ErrorResponse(`The User with ID ${req.user.id} Does not have authorization to Create Another Bootcamp`, 400));
+        }
+
         const bootcamp = await Bootcamp.create(req.body);
         res.status(201).json({success: true, msg: 'Create Bootcamp', data: bootcamp});
     } catch(err) {
@@ -42,32 +52,43 @@ const createBootcamp = async (req, res, next) => {
     }
 };
 
-// @desc: UPDATE Bootcamp
+// @desc: UPDATE Bootcamp only if Admin or the publisher for the bootcamp in question
 // @route: POST /api/v1/bootcamps/:id
 // @access: public 
 const updateBootcamp = async (req, res, next) => {
     try{
-        const mongooseConfig = {new: true, runValidators: true}
-        const bootcamp  = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, mongooseConfig);
+        let bootcamp = await Bootcamp.findById(req.params.id);
+        // Check if bootcamp exists
         if(!bootcamp){
             return next(new ErrorResponse(`Bootcamp id:${req.params.id} not found`, 404));
         }
+        // make sure the user is the publisher for the bootcamp or is admin
+        if(req.user.id !== bootcamp.user.toString() && req.user.role !== 'admin'){
+            return next(new ErrorResponse(`User ${req.user.id} does not have authorization to update this bootcamp`), 401);
+        }
+        // Ready to Update  
+        const mongooseConfig = {new: true, runValidators: true};
+        bootcamp  = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, mongooseConfig);
         res.status(200).json({success: true, msg: `Update Bootcamps with Id ${req.params.id}`, data: bootcamp});
     } catch {
        next(err);
     } 
 };
 
-// @desc: DELETE Bootcamp
+// @desc: DELETE Bootcamp only if the publisher of the bootcamp or is admin
 // @route: DELETE /api/v1/bootcamps/:id
 // @access: public 
 const deleteBootcamp = async (req, res, next) => {
 
     try {
-        const bootcamp = await Bootcamp.findById(req.params.id);
-
+        let bootcamp = await Bootcamp.findById(req.params.id);
+        // Check if bootcamp exists
         if(!bootcamp){
             return next(new ErrorResponse(`Bootcamp id:${req.params.id} not found`, 404));
+        }
+        // Make sure the user is the publisher for the bootcamp or is admin
+        if(req.user.id !== bootcamp.user.toString() && req.user.role !== 'admin'){
+            return next(new ErrorResponse(`User ${req.user.id} does not have authorization to Delete this bootcamp`), 401);
         }
         
         bootcamp.remove();
@@ -108,10 +129,15 @@ const getBootcampsInRadius = asyncHandler (async (req, res, next) => {
 // @access: private 
 const uploadBootcampPhoto = asyncHandler (async (req, res, next) => {
 
-    const bootcamp = await Bootcamp.findById(req.params.id);
+    let bootcamp = await Bootcamp.findById(req.params.id);
 
     if(!bootcamp){
         return next(new ErrorResponse(`Bootcamp id:${req.params.id} not found`, 404));
+    }
+
+    // make sure the user is the publisher for the bootcamp or is admin
+    if(req.user.id !== bootcamp.user.toString() && req.user.role !== 'admin'){
+        return next(new ErrorResponse(`User ${req.user.id} does not have authorization to update this bootcamp`), 401);
     }
     
     // file validation checks
