@@ -51,8 +51,8 @@ const UserSchema = new mongoose.Schema({
 
 });
 
-// Add pre-save mongoose middleware for encryption 
-// -----------------------------------------------
+// Add pre-save mongoose middleware for password encryption 
+// --------------------------------------------------------
 UserSchema.pre('save', async function(next){
 
   // Move on if password is not changed. (i.e. during a password reset) 
