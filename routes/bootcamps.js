@@ -7,12 +7,14 @@ const queryHandler = require('../middleware/queryHandler');
 
 /// Include Other Resource Routers for Joins
 const courseRouter = require('./courses');
+const reviewRouter = require('./reviews');
 
 // Initialize the Router
 const router = express.Router();
 
 // Re-direct Route into other routes
 router.use('/:bootcampId/courses', courseRouter);
+router.use('/:bootcampId/reviews', reviewRouter);
 
 
 
