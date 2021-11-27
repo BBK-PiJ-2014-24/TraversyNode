@@ -22,6 +22,108 @@ const getReviews = asyncHandler (async (req, res, next) => {
     }
 });
 
+// @desc: Get a review by ID 
+// @route: GET /api/v1/reviews/:id
+// @access: public 
+// Using asyncHandler
+const getReviewById = asyncHandler (async (req, res, next) => {
+
+    const populate = {path: 'bootcamp', select: 'name description'}
+    const review = await Review.findById(req.params.id).populate(populate);
+
+    if(!review){
+        return next(new ErrorResponse(`No Review Found with id: ${req.params.id}`), 404);
+    }
+
+    res.status(200)
+       .json({success: true, data: review});
+});
+
+
+// @desc: Create a new Review
+// @route: POST /api/v1/bootcamps/:bootcampId/reviews
+// @access: public 
+// Using asyncHandler
+const createReview = asyncHandler (async (req, res, next) => {
+
+    const bootcamp = Bootcamp.findById(req.params.bootcampId);
+
+    if(!bootcamp){
+        return next(new ErrorResponse(`No Bootcamp Found with id: ${req.params.bootcampId}`), 404);
+    }
+
+    // Add more data to the req.body, which already has the Review
+    // req.body.user = req.user.id;
+    req.body.bootcampId = req.params.bootcampId;
+
+    // Submit to the DB
+    const review = await Review.create(req.body);
+
+    if(!review){
+        return next(new ErrorResponse(`Review Submission Failed`), 404);
+    }
+
+    // Send Response back to the client
+    res.status(201)
+       .json({success: true, data: review});
+});
+
+
+// @desc: Update a Review
+// @route: PUT /api/v1/reviews/:id
+// @access: public 
+// Using asyncHandler
+const updateReview = asyncHandler (async (req, res, next) => {
+
+    let review = await Review.findById(req.params.id);
+    
+    if(!review){
+        return next(new ErrorResponse(`Review with id:${req.params.id} Not Found`), 404);
+    }
+    
+    // Check user has permission to update review
+    if(review.user.toString() !== req.user.id && req.user.role !== 'admin'){
+        return next(new ErrorResponse(`User with id: ${req.user.id} Does Not Have Authorization to Update Review`), 401);
+
+    }
+
+    // Submit to the DB
+    const config = {new: true, runValidators: true};
+    review = await Review.findByIdAndUpdate(req.params.id, req.body, config);
+    // Send Response back to the client
+    res.status(200)
+       .json({success: true, data: review});
+});
+
+
+// @desc: Delete a Review
+// @route: DELETE /api/v1/reviews/:id
+// @access: public 
+// Using asyncHandler
+const deleteReview = asyncHandler (async (req, res, next) => {
+
+    let review = await Review.findById(req.params.id);
+    
+    if(!review){
+        return next(new ErrorResponse(`Review with id:${req.params.id} Not Found`), 404);
+    }
+    
+    // Check user has permission to delete a review
+    if(review.user.toString() !== req.user.id && req.user.role !== 'admin'){
+        return next(new ErrorResponse(`User with id: ${req.user.id} Does Not Have Authorization to Delete a Review`), 401);
+
+    }
+
+    // Submit to the DB
+    await Review.findByIdAndRemove(req.params.id);
+    // Send Response back to the client
+    res.status(200)
+       .json({success: true, data: review});
+});
 // Exports
 // -------
 exports.getReviews = getReviews;
+exports.getReviewById = getReviewById;
+exports.createReview = createReview;
+exports.updateReview = updateReview;
+exports.deleteReview = deleteReview;
