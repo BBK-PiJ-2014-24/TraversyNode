@@ -10,7 +10,7 @@ const ErrorResponse = require('../utils/errorResponse');
 
     // Incorrect Mongoose ObjectId submitted to the server
     if(err.name === 'CastError'){
-        const message = `Bootcamp id:${err.value} is not found`;
+        const message = `Resource id:${err.value} is not found`;
         error = new ErrorResponse(message, 404);
     }
 
