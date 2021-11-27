@@ -15,8 +15,17 @@ router.route('/login')
 router.route('/me')
       .get(authHandler.protectRoute, authController.getMyLogin);
 
-router.route('/forgotpassword')
+router.route('/updatedetails')
+      .put(authHandler.protectRoute, authController.updateDetails);      
+
+router.route('/updatepassword')
+      .put(authHandler.protectRoute, authController.updatePassword);      
+
+      router.route('/forgotpassword')
       .post(authController.forgotPassword);
+
+router.route('/resetpassword/:resettoken')
+      .put(authController.resetPassword);
 
 module.exports = router;
 

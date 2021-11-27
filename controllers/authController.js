@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const dotenv = require('dotenv');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+
 
 // @desc: Register User and send token to user to keep him online
 // @route: POST /api/v1/auth/register
@@ -94,8 +96,62 @@ const getMyLogin = asyncHandler( async (req, res, next) => {
         message: 'Return Login Data to Client',
         body: user
     });
+})
+
+// @desc: Update User Details - name and email
+// @route: PUT /api/v1/auth/updatedetails
+// @access: private 
+// Using asyncHandler
+const updateDetails = asyncHandler( async (req, res, next) => {
+
+    const updatedFields = {
+        name: req.body.name,
+        email: req.body.email,
+    };
+
+    const config = {
+        new: true,
+        runValidators: true
+    };
+
+    const user = await User.findByIdAndUpdate(req.user.id, updatedFields, config);
+
+    if(!user){
+        return next(new ErrorResponse(`User with ID:${req.user.id} not found`, 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Return Login Data to Client',
+        body: user
+    });
+})
+
+// @desc: PUT  Update User Password
+// @route: GET /api/v1/auth/updatepassword
+// @access: private 
+// Using asyncHandler
+const updatePassword = asyncHandler( async (req, res, next) => {
+    const user = await User.findById(req.user.id).select('+password');
+
+    const currentPassword = await user.checkPassword(req.body.currentPassword);
+
+    // check current password
+    if(!currentPassword){
+        return next(new ErrorResponse(`Password for User id:${req.user.id} not found`, 401));
+    }
+
+    // Append to req 
+    user.password = req.body.newPassword;
+
+    // Save to DB
+    await user.save();
+
+    // Send Token
+    sendCookieTokenResponse(user, 200, res);
 
 })
+
 
 // @desc: Forgot Password 
 // @route: GET /api/v1/auth/forgotpassword
@@ -115,7 +171,7 @@ const forgotPassword = asyncHandler( async (req, res, next) => {
     await user.save({validateBeforeSave: false});
 
     // Set up Email
-    const confirmEmailURL = `${req.protocol}://${req.get('host')}/api/v1/resetpassword/${resetToken}`;
+    const confirmEmailURL = `${req.protocol}://${req.get('host')}/api/v1/auth/resetpassword/${resetToken}`;
     const message = `You are receiving this email because you need to confirm your email address. Please make a GET request to: \n\n ${confirmEmailURL}`;
 
     try {
@@ -142,7 +198,43 @@ const forgotPassword = asyncHandler( async (req, res, next) => {
 })
 
 
+// @desc: Reset Password
+// @route: PUT /api/v1/auth/resetpassword/:resettoken
+// @access: public
+// Using asyncHandler
+const resetPassword = asyncHandler( async (req, res, next) => {
+
+    // Get Hashed Token
+    const resetPasswordToken = crypto.createHash('sha256')
+                                     .update(req.params.resettoken)
+                                     .digest('hex');
+
+    const user = await User.findOne({
+        resetPasswordToken,
+        resetPasswordExpire: {$gt: Date.now()}
+    });
+
+    if(!user){
+        return next(new ErrorResponse('Invalid Token. User Not Found', 400));
+    }
+
+    // Set New Password
+    user.password = req.body.password;
+
+    // Clear Reset Variables
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    // Save to DB
+    await user.save();
+
+    sendCookieTokenResponse(user, 200, res);
+
+})
 exports.registerUser = registerUser; 
 exports.loginUser = loginUser;
 exports.getMyLogin = getMyLogin;
 exports.forgotPassword = forgotPassword;
+exports.resetPassword = resetPassword;
+exports.updateDetails = updateDetails;
+exports.updatePassword = updatePassword;
