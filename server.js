@@ -1,4 +1,11 @@
+
 const express = require('express');
+const mongoSanitize = require('express-mongo-sanitize'); // PREVENT NoSQL INJECTION ATTACKS 
+const xssClean = require('xss-clean'); // PREVENT XSS CROSS-SITE ATTACKS
+const rateLimit = require("express-rate-limit"); // PREVENT DOS DENIAL OF SERVICE ATTACKS
+const hpp = require('hpp'); // PREVENT PARAM POLUTION ATTACKS
+const cors = require('cors'); // PREVENT CORS ATTACKS 
+const helmet = require('helmet'); // SECURITY HEADERS ON RES OBJ
 const path = require('path');
 const dotenv = require('dotenv');
 const logger = require('./middleware/loggerHandler');
@@ -35,6 +42,30 @@ if(process.env.NODE_ENV === 'development'){
     app.use(logger); // custom made logger
     app.use(morgan('dev')); // a logger package on npm
 }
+//  ** SECURITY **
+//  **==========**
+// PREVENT NoSQL INJECTION ATTACKS
+app.use(mongoSanitize());
+
+// PREVENT XSS CROSS-SITE SCRIPTING ATTACKS
+ app.use(xssClean());
+
+// PREVENT DOS ATTACKS WITH RATE LIMITER
+const limiter = rateLimit({
+    windowMs: 10*60*100, // 10mins
+    max: 100
+});
+app.use(limiter);
+
+// PREVENT HTTP PARAM POLUTION
+app.use(hpp());
+
+// PREVENT CORS ATTACKS
+app.use(cors());
+
+// SET SECURITY HEADERS to Res Obj
+app.use(helmet());
+
 
 
 // File Upload Middleware from 'Express-Fileupload'
