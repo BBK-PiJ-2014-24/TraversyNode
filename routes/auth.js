@@ -12,6 +12,9 @@ router.route('/register')
 router.route('/login')
       .post(authController.loginUser);
 
+router.route('/logout')
+      .get(authController.logout);      
+
 router.route('/me')
       .get(authHandler.protectRoute, authController.getMyLogin);
 

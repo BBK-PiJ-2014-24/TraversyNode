@@ -24,7 +24,6 @@ const registerUser = asyncHandler( async(req, res, next) => {
 
     // Successful login - send token in cookie
     sendCookieTokenResponse(user, 200, res);
-
 }); 
 
 
@@ -95,6 +94,24 @@ const getMyLogin = asyncHandler( async (req, res, next) => {
         success: true,
         message: 'Return Login Data to Client',
         body: user
+    });
+})
+
+// @desc: Log out User and Clear Cookie
+// @route: GET /api/v1/auth/logout
+// @access: private
+// Using asyncHandler
+const logout = asyncHandler( async (req, res, next) => {
+  
+    // Send a new replacement token (and thereby negating the old one) that expires in 10sec
+    res.cookie('token', 'none', 
+        {expires: new Date(Date.now() +10 *1000), httpOnly: true});  // expires in 10sec
+
+
+    res.status(200).json({
+        success: true,
+        message: 'Logout User',
+        body: {}
     });
 })
 
@@ -238,3 +255,4 @@ exports.forgotPassword = forgotPassword;
 exports.resetPassword = resetPassword;
 exports.updateDetails = updateDetails;
 exports.updatePassword = updatePassword;
+exports.logout = logout;
